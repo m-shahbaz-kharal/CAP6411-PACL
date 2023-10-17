@@ -18,9 +18,9 @@ from datasets import load_dataset
 ##################################################################
 # Pre-Trained Model Parameters
 ##################################################################
-MODEL_TAG = 'ViT-B/32'
-TRAINED_ON_DATA_TAG = '2m_first_10k'
-TRAINED_ON_EPOCH_TAG = 4
+MODEL_TAG = 'ViT-B/16'
+TRAINED_ON_DATA_TAG = 'gcc_2m_first_40k'
+TRAINED_ON_EPOCH_TAG = 15
 IMG_RES = 224
 BATCH_SIZE = 256
 patch_size = IMG_RES // int(MODEL_TAG.split('/')[1])
@@ -45,7 +45,7 @@ def _transform_seg(n_px):
 
 def _bilinear_upscale(n_px): return Compose([Resize(n_px, InterpolationMode.NEAREST)])
 
-metric = evaluate.load('mean_iou', experiment_id='norm_ade20k')
+metric = evaluate.load('mean_iou')
 ##################################################################
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 ##################################################################
@@ -53,7 +53,7 @@ print('Loading Model ...')
 model, preprocess = clip.load(MODEL_TAG,device=device,jit=False) # must set jit=False for training
 preprocess_seg = _transform_seg(model.visual.input_resolution)
 postprocess_seg = _bilinear_upscale(model.visual.input_resolution)
-checkpoint = torch.load(f'model_checkpoint/clip_pacl_diffusiondb_{TRAINED_ON_DATA_TAG}_epoch_{TRAINED_ON_EPOCH_TAG}.pt')
+checkpoint = torch.load(f'model_checkpoint/clip_pacl_{TRAINED_ON_DATA_TAG}_epoch{TRAINED_ON_EPOCH_TAG}.pt')
 model.load_state_dict(checkpoint['model_state_dict'])
 print(f'Model is loaded on {device}.')
 ##################################################################

@@ -1,0 +1,6 @@
+wandb/*
+data/ade-20k/*
+data/cs-171/*
+data/gcc/*
+data/pc-59/*
+data/pv-20/*

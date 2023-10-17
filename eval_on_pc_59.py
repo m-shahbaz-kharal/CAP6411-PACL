@@ -44,7 +44,7 @@ def _transform_seg(n_px):
 
 def _bilinear_upscale(n_px): return Compose([Resize(n_px, InterpolationMode.NEAREST)])
 
-metric = evaluate.load('mean_iou')
+metric = evaluate.load('mean_iou', experiment_id='norm_pc59')
 ##################################################################
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 ##################################################################
@@ -96,19 +96,19 @@ targets = []
 progress = 0
 total = len(dataset)
 
-# pre-calculate text features
-per_class_features = []
-for cls_id, cls in enumerate(CLASSES):
-    text_set = get_prompt_engineered_text_set(cls)
-    text_features = []
-    for text in text_set:   
-        text_input = clip.tokenize(text).to(device)
-        text_features.append(model.encode_text(text_input))
-    mean_feature = torch.mean(torch.stack(text_features), dim=0)
-    per_class_features.append(mean_feature)
-mean_text_features = torch.vstack(per_class_features)
-
 with torch.no_grad():
+    # pre-calculate text features
+    per_class_features = []
+    for cls_id, cls in enumerate(CLASSES):
+        text_set = get_prompt_engineered_text_set(cls)
+        text_features = []
+        for text in text_set:   
+            text_input = clip.tokenize(text).to(device)
+            text_features.append(model.encode_text(text_input))
+        mean_feature = torch.mean(torch.stack(text_features), dim=0)
+        per_class_features.append(mean_feature)
+    mean_text_features = torch.vstack(per_class_features)
+    
     for img, seg in dataloader:
         targets.append(seg.squeeze(1))
         img_features = model.encode_image(img.to(device))
@@ -129,4 +129,6 @@ torch.save(preds, f'eval_result/pc_59_pred.pt')
 targets = torch.vstack(targets)
 torch.save(targets, f'eval_result/pc_59_target.pt')
 metric_score = metric.compute(predictions=preds, references=targets, num_labels=len(CLASSES), ignore_index=0)
-print(f'Mean IoU {MODEL_TAG}_{TRAINED_ON_DATA_TAG}_{TRAINED_ON_EPOCH_TAG}: {metric_score}')
+print(f'Mean IoU {TRAINED_ON_DATA_TAG}_{TRAINED_ON_EPOCH_TAG}: {metric_score}')
+with open(f'eval_result/pc_59_{TRAINED_ON_DATA_TAG}_{TRAINED_ON_EPOCH_TAG}.txt', 'w') as f:
+    f.write(f'Mean IoU {TRAINED_ON_DATA_TAG}_{TRAINED_ON_EPOCH_TAG}: {metric_score}')

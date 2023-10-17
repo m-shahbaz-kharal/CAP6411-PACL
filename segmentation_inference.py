@@ -7,12 +7,12 @@ from PIL import Image
 ##################################################################
 # Parameters
 ##################################################################
-CLASSES = ['background', 'dog', 'football', 'person']
+CLASSES = ['background', 'dog', 'football', 'person', 'cat']
 IMAGE = 'test_image_dog_person_cat.jpg'
 IMAGE = f'./input_images/{IMAGE}'
 MODEL_TAG = 'ViT-B/16'
-DATA_TAG = '2m_first_100k'
-EPOCH = 9
+DATA_TAG = 'gcc_2m_first_40k'
+EPOCH = 'epoch15'
 IMG_RES = 224
 SEG_THRESHOLD = 0.5
 ##################################################################
@@ -33,7 +33,7 @@ def get_prompt_engineered_text_set(cls):
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 print('Loading Model ...')
 model, preprocess = clip.load(MODEL_TAG,device=device,jit=False) # must set jit=False for training
-checkpoint = torch.load(f'model_checkpoint/clip_pacl_diffusiondb_{DATA_TAG}_epoch_{EPOCH}.pt')
+checkpoint = torch.load(f'model_checkpoint/clip_pacl_{DATA_TAG}_{EPOCH}.pt')
 model.load_state_dict(checkpoint['model_state_dict'])
 
 print(f'Model is loaded on {device}.')

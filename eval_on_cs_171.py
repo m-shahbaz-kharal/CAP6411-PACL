@@ -44,7 +44,7 @@ def _transform_seg(n_px):
 
 def _bilinear_upscale(n_px): return Compose([Resize(n_px, InterpolationMode.NEAREST)])
 
-metric = evaluate.load('mean_iou')
+metric = evaluate.load('mean_iou', experiment_id='norm_cs171')
 ##################################################################
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 ##################################################################
@@ -129,6 +129,6 @@ torch.save(preds, f'eval_result/cs_171_pred.pt')
 targets = torch.vstack(targets)
 torch.save(targets, f'eval_result/cs_171_target.pt')
 metric_score = metric.compute(predictions=preds, references=targets, num_labels=len(CLASSES), ignore_index=0)
-print(f'Mean IoU {MODEL_TAG}_{TRAINED_ON_DATA_TAG}_{TRAINED_ON_EPOCH_TAG}: {metric_score}')
-with open(f'eval_result/cs_171_{MODEL_TAG}_{TRAINED_ON_DATA_TAG}_{TRAINED_ON_EPOCH_TAG}.txt', 'w') as f:
-    f.write(f'Mean IoU {MODEL_TAG}_{TRAINED_ON_DATA_TAG}_{TRAINED_ON_EPOCH_TAG}: {metric_score}')
+print(f'Mean IoU {TRAINED_ON_DATA_TAG}_{TRAINED_ON_EPOCH_TAG}: {metric_score}')
+with open(f'eval_result/cs_171_{TRAINED_ON_DATA_TAG}_{TRAINED_ON_EPOCH_TAG}.txt', 'w') as f:
+    f.write(f'Mean IoU {TRAINED_ON_DATA_TAG}_{TRAINED_ON_EPOCH_TAG}: {metric_score}')
