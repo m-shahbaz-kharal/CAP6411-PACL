@@ -2,6 +2,7 @@ from collections import OrderedDict
 from typing import Tuple, Union
 
 import numpy as np
+import math
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -205,7 +206,7 @@ class Transformer(nn.Module):
 
 
 class VisionTransformer(nn.Module):
-    def __init__(self, input_resolution: int, patch_size: int, width: int, layers: int, heads: int, output_dim: int, inference=False):
+    def __init__(self, input_resolution: int, patch_size: int, width: int, layers: int, heads: int, output_dim: int, inference=True):
         super().__init__()
         self.input_resolution = input_resolution
         self.output_dim = output_dim
@@ -223,16 +224,34 @@ class VisionTransformer(nn.Module):
         self.ln_post = LayerNorm(width)
         self.proj = nn.Parameter(scale * torch.randn(width, output_dim))
         self.joint_space_embedder = PACLJointSpaceEmbedder()
-
+        
 
     def forward(self, x: torch.Tensor):
         x = self.conv1(x)  # shape = [*, width, grid, grid]
+        w, h = x.shape[-2:]
         x = x.reshape(x.shape[0], x.shape[1], -1)  # shape = [*, width, grid ** 2]
         x = x.permute(0, 2, 1)  # shape = [*, grid ** 2, width]
         x = torch.cat([self.class_embedding.to(x.dtype) + torch.zeros(x.shape[0], 1, x.shape[-1], dtype=x.dtype, device=x.device), x], dim=1)  # shape = [*, grid ** 2 + 1, width]
-        x = x + self.positional_embedding.to(x.dtype)
-        x = self.ln_pre(x)
+        npatch = x.shape[1] - 1
+        N = self.positional_embedding.shape[0] - 1
+        if npatch == N and w == h: x = x + self.positional_embedding.to(x.dtype)
+        else:
+            class_pos_embed = self.positional_embedding[0, :]
+            patch_pos_embed = self.positional_embedding[1:, :]
+            dim = x.shape[-1]
+            w0 = w
+            h0 = h
+            w0, h0 = w0 + 0.1, h0 + 0.1
+            patch_pos_embed = nn.functional.interpolate(
+                patch_pos_embed.reshape(1, int(math.sqrt(N)), int(math.sqrt(N)), dim).permute(0, 3, 1, 2),
+                scale_factor=(w0 / math.sqrt(N), h0 / math.sqrt(N)),
+                mode='bicubic',
+            )
+            assert int(w0) == patch_pos_embed.shape[-2] and int(h0) == patch_pos_embed.shape[-1]
+            patch_pos_embed = patch_pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
+            x = x + torch.cat((class_pos_embed.unsqueeze(0).unsqueeze(0), patch_pos_embed), dim=1).half()
 
+        x = self.ln_pre(x)
         x = x.permute(1, 0, 2)  # NLD -> LND
         x = self.transformer(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
